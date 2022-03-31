@@ -6,8 +6,8 @@ import requests
 from bs4 import BeautifulSoup
 import csv  
 import time
-
-
+import os.path
+import json
 
 def create_csv_header():
     refernce_header = ['URL', 'Status', 'Inbound links']
@@ -16,40 +16,39 @@ def create_csv_header():
     write.writerows([refernce_header])
 
 
-def calculations(snapshot, row_list, data_dict):
+def calculations(snapshot, row_list, data_dict, rooturl):
     # We need to check if Target_url is on this page, if it is add it to the respective dict
     #Keep snapshots of the page and then iterate through them?
 
+    snapshot = load_json_snapshot(snapshot)
+    read_data(rooturl)
     for item in row_list: 
-        t = row_list[item]["Response"]
+        #t = row_list[item]["Response"]
         #data_dict.setdefault(item, []).append(t)
         for key in snapshot:
             if item in snapshot[key]["List"]:
                 data_dict.setdefault(item, []).append(key)
                 #data_dict.setdefault(key, []).append(response)
-                #time.sleep(0.5)
-                print("FOUND")
                 
-    
-
-def populate_data(data_dict, snapshot, full_target_url, row_list):
+                print("FOUND")
+    populate_data(data_dict, row_list)
+                
+def populate_data(data_dict, row_list):
     with open(r'output.csv', 'a', newline='') as f:
         
         writer = csv.writer(f)
         for key, value in data_dict.items():
-            response = row_list[key]["Response"]
-            writer.writerow([key, response, value])
+            #response = row_list[key]["Response"]
+            writer.writerow([key, value])
                 
 def read_data(rooturl):
-    with open('data.csv', 'r') as read_obj:
+    with open('urls_to_find.csv', 'r') as read_obj:
         exit = False
-        response_ok = "None"
-        
         csv_reader = reader(read_obj)
         header = next(csv_reader)
         if header != None:
             for row in csv_reader:
-
+                
                 if str(row[0]) == "":
                     print("EMPTRY ROW")
                     calculations(snapshot, row_list, data_dict)
@@ -62,12 +61,42 @@ def read_data(rooturl):
                 url_1 = author_url_string.replace("/content/pwc", rooturl)
                 full_target_url = url_1 + ".html"
 
+                row_list[full_target_url] = {}
+
+                if full_target_url in snapshot:
+                    row_list[full_target_url]["Response"] = snapshot[full_target_url]["Response"]
+                    print("FOUND RESPONSE IN SNAPSHOT. APPENDING>>>")
+
+def generate_snapshot_file():
+    if os.path.exists("data_snapshot_input.csv"):
+        print("data_snapshot_input.csv File Found - Generating a snapshot...")
+    else:
+        print("No data_snapshot_input.csv File Found. Exiting")
+        return
+    i = 0
+    with open('data_snapshot_input.csv', 'r') as read_obj:
+        csv_reader = reader(read_obj)
+        header = next(csv_reader)
+        if header != None:
+            for row in csv_reader:
+                
+                time.sleep(5)
+                if str(row[0]) == "":
+                    print("EMPTRY ROW")
+                    return
+
+                full_url_list = []
+                author_url_string = str(row[0])
+                url_1 = author_url_string.replace("/content/pwc", rooturl)
+                full_target_url = url_1 + ".html"
+
                 try:
-                    response = requests.get(full_target_url, allow_redirects=False, timeout=5)
+                    response = requests.get(full_target_url, allow_redirects=False, timeout=10)
                     soup = BeautifulSoup(response.text, 'html.parser')
                     hyperlink ='a'
                     for link in soup.find_all(hyperlink):
                         href_link = link.get('href')
+                        
                         try:
                             if href_link[0] == "/":
                                 try:
@@ -75,27 +104,28 @@ def read_data(rooturl):
                                         link_updated = href_link[1:]
 
                                         href_link = rooturl + link_updated
-                                        direction = "Internal"
                                     else:
                                         href_link = rooturl + href_link
                                 except Exception:
                                         href_link = rooturl + href_link
                             else:
                                 direction = "External"
-                            full_url_list.append(href_link)
                         except Exception:
-                            print("Exception")
+                            t = 0
                     
+                        full_url_list.append(href_link) ## Populate URL list for each node
+
                     if response.status_code == 301:
                         response_ok = "301 redirect"
                         print("REDIRECT", full_target_url)
                     elif response.ok:
+                        i = i + 1
                         response_ok = 'OK'
-                        print("VALID", full_target_url)
+                        print("VALID", full_target_url, "Total URLS:", i)
                         snapshot[full_target_url] = {}
                         snapshot[full_target_url]["List"] = full_url_list
                         snapshot[full_target_url]["Response"] = response_ok
-
+                        
                     else:
                         response_ok = "Broken"
                         print("INVALID", full_target_url)
@@ -103,11 +133,14 @@ def read_data(rooturl):
 
                 except Exception: #ReadTimeout
                     print("Timeout Exception")
+                    
+def load_json_snapshot(snapshot):
 
-            
-                row_list[full_target_url] = {}
-                row_list[full_target_url]["Response"] = response_ok
-                
+    with open('data_snapshot.json', 'r') as f:
+        snapshot = json.load(f)
+    return snapshot
+        
+
 
 if __name__ == "__main__":
     start = time.time()
@@ -117,9 +150,36 @@ if __name__ == "__main__":
     snapshot = {}
     row_list = {}
      
-    rooturl = 'https://www.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
+    rooturl = 'https://www-pwc-com-dpe-staging.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
     
-    read_data(rooturl)
+    if os.path.exists("data_snapshot.json"):
+        print("data_snapshot.json - FOUND!")
+        selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
+        while selection != '1' and selection != '2':
+            print('Invalid input')
+            selection = input("Would you like to re-generate snapshot? Press 1 to regenerate; Press 2 to continue\n")
+        if selection == '1':
+            generate_snapshot_file()
+            with open("data_snapshot.json", 'w') as f:
+                json.dump(snapshot, f, indent=2)  
+        elif selection == '2':
+            
+            calculations(snapshot, row_list, data_dict, rooturl)
+            
+    
+    else:
+        selection = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to Exit\n")
+        while selection != '1' and selection != '2':
+            print('Invalid input')
+            selection = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to continue\n")
+        if selection == '1':
+            generate_snapshot_file()
+        elif selection == '2':
+            exit()
+
+    
+
+    #read_data(rooturl)
 
     end = time.time()
     print(end - start)
