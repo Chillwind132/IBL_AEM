@@ -6,3 +6,10 @@ data_backup/.~lock.data - Copy.csv#
 data_backup/data - Copy.csv
 Time.txt.bak
 Time.txt
+backup/canadian_pages_prod.xlsx
+backup/canadian_pages_stage_publishedOnly.xlsx
+data_snapshot.csv
+data_snapshot.json
+timer.txt
+backup/~$canadian_pages_stage_publishedOnly.xlsx
+data_snapshot_input.csv
