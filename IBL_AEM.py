@@ -8,6 +8,8 @@ import csv
 import time
 import os.path
 import json
+import sys
+
 
 def create_csv_header():
     refernce_header = ['URL', 'Status', 'Inbound links']
@@ -31,15 +33,18 @@ def calculations(snapshot, row_list, data_dict, rooturl):
                 #data_dict.setdefault(key, []).append(response)
                 
                 print("FOUND")
-    populate_data(data_dict, row_list)
+    populate_data(data_dict, row_list, snapshot)
                 
-def populate_data(data_dict, row_list):
+def populate_data(data_dict, row_list, snapshot):
     with open(r'output.csv', 'a', newline='') as f:
         
         writer = csv.writer(f)
         for key, value in data_dict.items():
-            #response = row_list[key]["Response"]
-            writer.writerow([key, value])
+            try:
+                response = snapshot[key]["Response"]
+            except Exception:
+                response = "Response missing from DB"
+            writer.writerow([key, response, value])
                 
 def read_data(rooturl):
     with open('urls_to_find.csv', 'r') as read_obj:
@@ -72,15 +77,17 @@ def generate_snapshot_file():
         print("data_snapshot_input.csv File Found - Generating a snapshot...")
     else:
         print("No data_snapshot_input.csv File Found. Exiting")
-        return
+        time.sleep(1)
+        sys.exit()
+        
     i = 0
-    with open('data_snapshot_input.csv', 'r') as read_obj:
+    with open('data_snapshot_input.csv', 'r') as read_obj: ### data_snapshot_input.csv 
         csv_reader = reader(read_obj)
         header = next(csv_reader)
         if header != None:
             for row in csv_reader:
                 
-                time.sleep(5)
+                time.sleep(1)
                 if str(row[0]) == "":
                     print("EMPTRY ROW")
                     return
@@ -133,14 +140,14 @@ def generate_snapshot_file():
 
                 except Exception: #ReadTimeout
                     print("Timeout Exception")
+
+                    ### Update JSON line by line in case it crashes?
                     
 def load_json_snapshot(snapshot):
 
     with open('data_snapshot.json', 'r') as f:
         snapshot = json.load(f)
     return snapshot
-        
-
 
 if __name__ == "__main__":
     start = time.time()
