@@ -36,21 +36,24 @@ class main():
                 print('Invalid input')
                 selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
             if selection == '1':
+
                 self.generate_snapshot_file()
-                with open("data_snapshot.json", 'w') as f:
-                    json.dump(self.snapshot, f, indent=2)  
+
             elif selection == '2':
 
                 self.calculations(self.snapshot, self.row_list, self.data_dict, self.rooturl)
         else:
-            selection = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to Exit\n")
+            print(Back.RED + "data_snapshot.json - NOT FOUND!" + Style.RESET_ALL)
+            selection = input("Would you like to generate a new snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to Exit\n")
             while selection != '1' and selection != '2':
                 print('Invalid input')
                 selection = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to continue\n")
             if selection == '1':
+                self.create_json()
                 self.generate_snapshot_file()
+
             elif selection == '2':
-                exit()
+                sys.exit()
 
     def create_csv_header(self):
         refernce_header = ['URL', 'Status', 'Inbound links']
@@ -72,8 +75,9 @@ class main():
                 if item in snapshot[key]["List"]:
                     data_dict.setdefault(item, []).append(key)
                     #data_dict.setdefault(key, []).append(response)
-
+                    
                     print("FOUND")
+
         self.populate_data(data_dict, row_list, snapshot)
 
     def populate_data(self, data_dict, row_list, snapshot):
@@ -135,6 +139,7 @@ class main():
 
                         print (Back.GREEN + "Total nodes added to snapshot: {1} Total errors caught: {0}".format(self.ex_cnt, self.i) + Style.RESET_ALL)
                         return
+
                     time.sleep(1)
                     self.record_response()
 
@@ -182,17 +187,32 @@ class main():
                 self.snapshot[full_target_url] = {}
                 self.snapshot[full_target_url]["List"] = full_url_list
                 self.snapshot[full_target_url]["Response"] = response_ok
-
+                self.snapshot[full_target_url]["Index"] = self.i
             else:
                 response_ok = "Broken"
                 print("INVALID", full_target_url)
-                #data_dict.setdefault(full_target_url, []).append('Broken URL')        
-            
+                #data_dict.setdefault(full_target_url, []).append('Broken URL')    
+                
+            if self.i % 10 == 0: # Update JSON every N iterations
+                self.update_json(self.snapshot)
+
         except (requests.exceptions.RequestException, ValueError) as e:
-            print('Error caught!') 
+            print(Back.RED + 'Error caught!' + Style.RESET_ALL) 
             self.ex_cnt = self.ex_cnt + 1
             print(e)
-        
+
+    def create_json(self):
+        with open('data_snapshot.json', 'w') as f:
+            json.dump("", f, indent=2)
+
+    def update_json(self, snapshot ):
+
+        with open('data_snapshot.json') as f:
+            data = json.load(f)
+
+        with open('data_snapshot.json', 'w') as f:
+            json.dump(snapshot, f, indent=2)
+
     def load_json_snapshot(self, snapshot):
 
         with open('data_snapshot.json', 'r') as f:
