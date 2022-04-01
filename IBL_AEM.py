@@ -11,6 +11,7 @@ import json
 import sys
 from colorama import Fore, Back, Style
 from colorama import init
+import concurrent.futures
 
 class main():
     def __init__(self):
@@ -20,6 +21,7 @@ class main():
         self.data_dict = {}
         self.snapshot = {}
         self.row_list = {}
+        self.list_urls_updated =[]
         self.i = 0
         self.ex_cnt = 0
         self.found_cnt = 0
@@ -37,21 +39,27 @@ class main():
         if self.selection == '1':
             t0 = time.time()
             self.generate_snapshot_file()
+            t1 = time.time()
+            self.update_json(self.snapshot)
+            print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
+            print (Back.GREEN + f"Total nodes added to snapshot: {self.i} Total errors caught: {self.ex_cnt}" + Style.RESET_ALL)
             
         elif self.selection == '2':
+            
             self.calculations(self.snapshot, self.row_list, self.data_dict, self.rooturl)
 
         if self.selection_2 == '1':
             self.create_json()
             t0 = time.time()
             self.generate_snapshot_file()
+            t1 = time.time()
+            self.update_json(self.snapshot)
+            print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
+            print(Back.GREEN + f"Total nodes added to snapshot: {self.i} Total errors caught: {self.ex_cnt}" + Style.RESET_)
             
         elif self.selection_2 == '2':
             sys.exit()
-
-        t1 = time.time()
-        print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
-
+        
         print("Done")
 
     def user_input(self):
@@ -139,10 +147,20 @@ class main():
             sys.exit()
         
         with open('data_snapshot_input.csv', 'r') as read_obj: ### data_snapshot_input.csv 
-            csv_reader = reader(read_obj)
-            header = next(csv_reader)
-            if header != None:
-                for row in csv_reader:
+            for row in csv.reader(read_obj):    
+                author_url_string = row[0]
+                url_1 = author_url_string.replace("/content/pwc", self.rooturl)
+                if url_1 != "":
+                    full_target_url = url_1 + ".html"
+                    self.list_urls_updated.append(full_target_url)
+            
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                executor.map(self.record_response, self.list_urls_updated)  #
+                executor.shutdown(wait=True)
+                    
+
+                """
                     self.row = row
                     
                     if str(row[0]) == "": ## Check for emptry last row and exit
@@ -156,18 +174,18 @@ class main():
                         return
 
                     time.sleep(0.25)
-                    self.record_response()
+                    
+                    self.record_response(str(self.row[0]))
 
+                   
+                """
                         ### Update JSON line by line in case it crashes?
 
-    def record_response(self):
+    def record_response(self, url):
         full_url_list = []
-        author_url_string = str(self.row[0])
-        url_1 = author_url_string.replace("/content/pwc", self.rooturl)
-        full_target_url = url_1 + ".html"
-
+        
         try:
-            response = requests.get(full_target_url, allow_redirects=False, timeout=10)
+            response = requests.get(url, allow_redirects=False, timeout=10)
             soup = BeautifulSoup(response.text, 'html.parser')
             hyperlink ='a'
             for link in soup.find_all(hyperlink):
@@ -190,31 +208,33 @@ class main():
                     t = 0
                 
                 if href_link != '#':
-                    full_url_list.append(href_link) ## Populate URL list for each node    
+                    full_url_list.append(href_link) ## Populate URL list for each node 
+
+            time.sleep(0.25)
 
             if response.status_code == 301:
                 response_ok = "301 redirect"
-                print("REDIRECT", full_target_url)
+                print("REDIRECT\n", url)
             elif response.ok:
                 self.i = self.i + 1
                 response_ok = 'OK'
-                print(f"VALID: {full_target_url} Total URLS: {self.i}")
-                self.snapshot[full_target_url] = {}
-                self.snapshot[full_target_url]["List"] = full_url_list
-                self.snapshot[full_target_url]["Response"] = response_ok
-                self.snapshot[full_target_url]["Index"] = self.i
+                print(f"VALID: {url} Total URLS: {self.i}\n")
+                self.snapshot[url] = {}
+                self.snapshot[url]["List"] = full_url_list
+                self.snapshot[url]["Response"] = response_ok
+                self.snapshot[url]["Index"] = self.i
             else:
                 response_ok = "Broken"
-                print(f"INVALID: {full_target_url}")
+                print(f"INVALID: {url}\n")
                 #data_dict.setdefault(full_target_url, []).append('Broken URL')    
                 
-            if self.i % 10 == 0: # Update JSON every N iterations
-                self.update_json(self.snapshot)
+            #if self.i % 10 == 0: # Update JSON every N iterations
+                #self.update_json(self.snapshot)
 
         except (requests.exceptions.RequestException, ValueError) as e:
-            print(Back.RED + 'Error caught!' + Style.RESET_ALL) 
+            print(Back.RED + 'Error caught!\n' + Style.RESET_ALL) 
             self.ex_cnt = self.ex_cnt + 1
-            print(e)
+            print(f"{e}\n")
 
     def create_json(self):
         with open('data_snapshot.json', 'w') as f:
