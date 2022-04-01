@@ -14,3 +14,6 @@ timer.txt
 backup/~$canadian_pages_stage_publishedOnly.xlsx
 data_snapshot_input.csv
 urls_to_find.csv
+Test_faster/test_faster.py
+Test_faster/URLs.txt
+Test_faster/backup/urls_backup.txt

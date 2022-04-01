@@ -22,45 +22,57 @@ class main():
         self.row_list = {}
         self.i = 0
         self.ex_cnt = 0
+        self.found_cnt = 0
         self.row = ""
-
+        self.selection = ""
+        self.selection_2 = ""
+        self.main()
+        
+    def main(self):
+        
         init()
         self.create_csv_header()
         self.user_input()
 
+        if self.selection == '1':
+            t0 = time.time()
+            self.generate_snapshot_file()
+            
+        elif self.selection == '2':
+            self.calculations(self.snapshot, self.row_list, self.data_dict, self.rooturl)
+
+        if self.selection_2 == '1':
+            self.create_json()
+            t0 = time.time()
+            self.generate_snapshot_file()
+            
+        elif self.selection_2 == '2':
+            sys.exit()
+
+        t1 = time.time()
+        print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
+
+        print("Done")
+
     def user_input(self):
         if os.path.exists("data_snapshot.json"):
             print(Back.GREEN + "data_snapshot.json - FOUND!" + Style.RESET_ALL)
-            selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
-            while selection != '1' and selection != '2':
+            self.selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
+            while self.selection != '1' and self.selection != '2':
                 print('Invalid input')
-                selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
-            if selection == '1':
-
-                self.generate_snapshot_file()
-
-            elif selection == '2':
-
-                self.calculations(self.snapshot, self.row_list, self.data_dict, self.rooturl)
-        else:
+                self.selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
+        elif os.path.exists("data_snapshot.json") == False:
             print(Back.RED + "data_snapshot.json - NOT FOUND!" + Style.RESET_ALL)
-            selection = input("Would you like to generate a new snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to Exit\n")
-            while selection != '1' and selection != '2':
+            self.selection_2 = input("Would you like to generate a new snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to Exit\n")
+            while self.selection_2 != '1' and self.selection_2 != '2':
                 print('Invalid input')
-                selection = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to continue\n")
-            if selection == '1':
-                self.create_json()
-                self.generate_snapshot_file()
-
-            elif selection == '2':
-                sys.exit()
-
+                self.selection_2 = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to continue\n")
+            
     def create_csv_header(self):
         refernce_header = ['URL', 'Status', 'Inbound links']
         file = open('output.csv', 'w', newline='')
         write = csv.writer(file)
         write.writerows([refernce_header])
-
 
     def calculations(self, snapshot, row_list, data_dict, rooturl):
         # We need to check if Target_url is on this page, if it is add it to the respective dict
@@ -77,7 +89,9 @@ class main():
                     #data_dict.setdefault(key, []).append(response)
                     
                     print("FOUND")
+                    self.found_cnt = self.found_cnt + 1
 
+        print(Back.BLUE + f"Total matches found {self.found_cnt}" + Style.RESET_ALL)
         self.populate_data(data_dict, row_list, snapshot)
 
     def populate_data(self, data_dict, row_list, snapshot):
@@ -121,9 +135,9 @@ class main():
             print(Back.GREEN + "data_snapshot_input.csv File Found - Generating a snapshot..." + Style.RESET_ALL)
         else:
             print(Fore.RED + "No data_snapshot_input.csv File Found. Exiting" + Style.RESET_ALL )
-            time.sleep(1)
+            
             sys.exit()
-
+        
         with open('data_snapshot_input.csv', 'r') as read_obj: ### data_snapshot_input.csv 
             csv_reader = reader(read_obj)
             header = next(csv_reader)
@@ -131,16 +145,17 @@ class main():
                 for row in csv_reader:
                     self.row = row
                     
-                    if str(row[0]) == "":
+                    if str(row[0]) == "": ## Check for emptry last row and exit
                         print("EMPTRY ROW")
 
                         with open("data_snapshot.json", 'w') as f:
-                            json.dump(self.snapshot, f, indent=2)  
+                            json.dump(self.snapshot, f, indent=2)
+                         
 
                         print (Back.GREEN + "Total nodes added to snapshot: {1} Total errors caught: {0}".format(self.ex_cnt, self.i) + Style.RESET_ALL)
                         return
 
-                    time.sleep(1)
+                    time.sleep(0.25)
                     self.record_response()
 
                         ### Update JSON line by line in case it crashes?
@@ -183,14 +198,14 @@ class main():
             elif response.ok:
                 self.i = self.i + 1
                 response_ok = 'OK'
-                print("VALID", full_target_url, "Total URLS:", self.i)
+                print(f"VALID: {full_target_url} Total URLS: {self.i}")
                 self.snapshot[full_target_url] = {}
                 self.snapshot[full_target_url]["List"] = full_url_list
                 self.snapshot[full_target_url]["Response"] = response_ok
                 self.snapshot[full_target_url]["Index"] = self.i
             else:
                 response_ok = "Broken"
-                print("INVALID", full_target_url)
+                print(f"INVALID: {full_target_url}")
                 #data_dict.setdefault(full_target_url, []).append('Broken URL')    
                 
             if self.i % 10 == 0: # Update JSON every N iterations
@@ -220,13 +235,11 @@ class main():
         return snapshot
 
 if __name__ == "__main__":
-    start = time.time()
     main()
 
-    end = time.time()
-    print(end - start)
     
-    print("Done")
+    
+    
     
 
 # https://www.pwc.com/ca/en/industries/entertainment-media/moving-into-multiple-business-models-download-form
