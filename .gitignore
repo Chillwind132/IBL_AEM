@@ -2,18 +2,15 @@ data.csv
 .~lock.data.csv#
 .~lock.output.csv#
 output.csv
-data_backup/.~lock.data - Copy.csv#
-data_backup/data - Copy.csv
+data_backup/
 Time.txt.bak
 Time.txt
-backup/canadian_pages_prod.xlsx
-backup/canadian_pages_stage_publishedOnly.xlsx
+backup/
 data_snapshot.csv
 data_snapshot.json
 timer.txt
 backup/~$canadian_pages_stage_publishedOnly.xlsx
 data_snapshot_input.csv
 urls_to_find.csv
-Test_faster/test_faster.py
-Test_faster/URLs.txt
-Test_faster/backup/urls_backup.txt
+Test_faster/
+JSON databases/
