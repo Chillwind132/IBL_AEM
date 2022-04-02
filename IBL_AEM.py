@@ -25,9 +25,12 @@ class main():
         self.i = 0
         self.ex_cnt = 0
         self.found_cnt = 0
+        self.redirect_i = 0
+        self.broken_i = 0
         self.row = ""
         self.selection = ""
         self.selection_2 = ""
+        
         self.main()
         
     def main(self):
@@ -42,7 +45,7 @@ class main():
             t1 = time.time()
             self.update_json(self.snapshot)
             print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
-            print (Back.GREEN + f"Total nodes added to snapshot: {self.i} Total errors caught: {self.ex_cnt}" + Style.RESET_ALL)
+            print (Back.GREEN + f"Total nodes added to snapshot: {self.i} Total redirects: {self.redirect_i} Total broken: {self.broken_i} Total errors caught: {self.ex_cnt}" + Style.RESET_ALL)
             
         elif self.selection == '2':
             
@@ -55,7 +58,7 @@ class main():
             t1 = time.time()
             self.update_json(self.snapshot)
             print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
-            print(Back.GREEN + f"Total nodes added to snapshot: {self.i} Total errors caught: {self.ex_cnt}" + Style.RESET_)
+            print(Back.GREEN + f"Total nodes added to snapshot: {self.i} Total redirects: {self.redirect_i} Total broken: {self.broken_i} Total errors caught: {self.ex_cnt}" + Style.RESET_)
             
         elif self.selection_2 == '2':
             sys.exit()
@@ -139,6 +142,9 @@ class main():
                         print("FOUND RESPONSE IN SNAPSHOT. APPENDING>>>")
 
     def generate_snapshot_file(self):
+
+        MAX_THREADS = 5 # Number of parallel threads
+
         if os.path.exists("data_snapshot_input.csv"):
             print(Back.GREEN + "data_snapshot_input.csv File Found - Generating a snapshot..." + Style.RESET_ALL)
         else:
@@ -155,7 +161,7 @@ class main():
                     self.list_urls_updated.append(full_target_url)
             
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 executor.map(self.record_response, self.list_urls_updated)  #
                 executor.shutdown(wait=True)
                     
@@ -215,6 +221,7 @@ class main():
             if response.status_code == 301:
                 response_ok = "301 redirect"
                 print("REDIRECT\n", url)
+                self.redirect_i = self.redirect_i + 1
             elif response.ok:
                 self.i = self.i + 1
                 response_ok = 'OK'
@@ -226,6 +233,8 @@ class main():
             else:
                 response_ok = "Broken"
                 print(f"INVALID: {url}\n")
+                self.broken_i = self.broken_i + 1
+
                 #data_dict.setdefault(full_target_url, []).append('Broken URL')    
                 
             #if self.i % 10 == 0: # Update JSON every N iterations
