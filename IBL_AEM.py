@@ -16,7 +16,7 @@ import concurrent.futures
 class main():
     def __init__(self):
         
-        self.rooturl = 'https://www-pwc-com-dpe-staging.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
+        self.rooturl = 'https://www.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
 
         self.data_dict = {}
         self.snapshot = {}
@@ -30,7 +30,7 @@ class main():
         self.row = ""
         self.selection = ""
         self.selection_2 = ""
-        
+
         self.main()
         
     def main(self):
@@ -88,7 +88,7 @@ class main():
     def calculations(self, snapshot, row_list, data_dict, rooturl):
         # We need to check if Target_url is on this page, if it is add it to the respective dict
         #Keep snapshots of the page and then iterate through them?
-
+        t0 = time.time()
         snapshot = self.load_json_snapshot(snapshot)
         self.read_data(rooturl)
         for item in row_list: 
@@ -99,11 +99,12 @@ class main():
                     data_dict.setdefault(item, []).append(key)
                     #data_dict.setdefault(key, []).append(response)
                     
-                    print("FOUND")
+                    print(f"FOUND - {key}")
                     self.found_cnt = self.found_cnt + 1
 
-        print(Back.BLUE + f"Total matches found {self.found_cnt}" + Style.RESET_ALL)
         self.populate_data(data_dict, row_list, snapshot)
+        t1 = time.time()
+        print(Back.BLUE + f"{t1-t0} seconds to find {self.found_cnt} matches" + Style.RESET_ALL)
 
     def populate_data(self, data_dict, row_list, snapshot):
         with open(r'output.csv', 'a', newline='') as f:
@@ -114,7 +115,14 @@ class main():
                     response = snapshot[key]["Response"]
                 except Exception:
                     response = "Response missing from DB"
+                    #time.sleep(3)
+                    response = self.get_response(key)
+                    #writer.writerow([key, response_2, value])
                 writer.writerow([key, response, value])
+
+    def get_response(self, url):
+        response = requests.get(url, allow_redirects=False, timeout=10)
+        return response.status_code
 
     def read_data(self, rooturl):
         with open('urls_to_find.csv', 'r') as read_obj:
@@ -159,34 +167,11 @@ class main():
                 if url_1 != "":
                     full_target_url = url_1 + ".html"
                     self.list_urls_updated.append(full_target_url)
-            
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 executor.map(self.record_response, self.list_urls_updated)  #
                 executor.shutdown(wait=True)
                     
-
-                """
-                    self.row = row
-                    
-                    if str(row[0]) == "": ## Check for emptry last row and exit
-                        print("EMPTRY ROW")
-
-                        with open("data_snapshot.json", 'w') as f:
-                            json.dump(self.snapshot, f, indent=2)
-                         
-
-                        print (Back.GREEN + "Total nodes added to snapshot: {1} Total errors caught: {0}".format(self.ex_cnt, self.i) + Style.RESET_ALL)
-                        return
-
-                    time.sleep(0.25)
-                    
-                    self.record_response(str(self.row[0]))
-
-                   
-                """
-                        ### Update JSON line by line in case it crashes?
-
     def record_response(self, url):
         full_url_list = []
         
@@ -196,9 +181,17 @@ class main():
             hyperlink ='a'
             for link in soup.find_all(hyperlink):
                 href_link = link.get('href')
-
+                ### probably not needed
+                if href_link is not None and href_link.startswith("content/pwc"):
+                    href_link_2 = href_link
+                    href_link_1 = href_link.replace("content/pwc","https://www.pwc.com")
+                    href_link =  href_link_1.replace(".html","/") + href_link_2 # checks for https://www.pwc.com/ca/en/services/tax/budgets/2021/content/pwc/ca/en/services/tax/budgets/2021.html
+                elif href_link is not None and href_link.startswith("/content/pwc"):
+                    href_link =  self.rooturl + href_link.replace("/content/pwc", "") + url
+                ###
                 try:
                     if href_link[0] == "/":
+                        
                         try:
                             if href_link[1] == "/":
                                 link_updated = href_link[1:]
@@ -216,7 +209,7 @@ class main():
                 if href_link != '#':
                     full_url_list.append(href_link) ## Populate URL list for each node 
 
-            time.sleep(0.25)
+            time.sleep(3)
 
             if response.status_code == 301:
                 response_ok = "301 redirect"
@@ -233,9 +226,7 @@ class main():
             else:
                 response_ok = "Broken"
                 print(f"INVALID: {url}\n")
-                self.broken_i = self.broken_i + 1
-
-                #data_dict.setdefault(full_target_url, []).append('Broken URL')    
+                self.broken_i = self.broken_i + 1 
                 
             #if self.i % 10 == 0: # Update JSON every N iterations
                 #self.update_json(self.snapshot)
