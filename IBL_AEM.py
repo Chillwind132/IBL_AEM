@@ -16,7 +16,7 @@ import concurrent.futures
 class main():
     def __init__(self):
         
-        self.rooturl = 'https://www.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
+        self.rooturl = 'https://www-pwc-com-dpe-staging.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
 
         self.data_dict = {}
         self.snapshot = {}
@@ -30,6 +30,7 @@ class main():
         self.row = ""
         self.selection = ""
         self.selection_2 = ""
+        self.selection_iGet = ""
 
         self.main()
         
@@ -72,6 +73,10 @@ class main():
             while self.selection != '1' and self.selection != '2':
                 print('Invalid input')
                 self.selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
+            self.selection_iGet = input("Would you like to record GET responses for unknown URLs? Press 1 to record; Press 2 skip\n")
+            while self.selection_iGet != '1' and self.selection_iGet != '2':
+                print('Invalid input')
+                self.selection_iGet = input("Would you like to record GET responses for unknown URLs? Press 1 to record; Press 2 skip\n")
         elif os.path.exists("data_snapshot.json") == False:
             print(Back.RED + "data_snapshot.json - NOT FOUND!" + Style.RESET_ALL)
             self.selection_2 = input("Would you like to generate a new snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to Exit\n")
@@ -80,7 +85,7 @@ class main():
                 self.selection_2 = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to continue\n")
             
     def create_csv_header(self):
-        refernce_header = ['URL', 'Status', 'Inbound links']
+        refernce_header = ['Outbound reference', 'Status', 'Source URLs']
         file = open('output.csv', 'w', newline='')
         write = csv.writer(file)
         write.writerows([refernce_header])
@@ -104,7 +109,7 @@ class main():
 
         self.populate_data(data_dict, row_list, snapshot)
         t1 = time.time()
-        print(Back.BLUE + f"{t1-t0} seconds to find {self.found_cnt} matches" + Style.RESET_ALL)
+        print(Back.BLUE + f"{t1-t0} seconds to find {self.found_cnt} matches. Total exceptions: {self.ex_cnt}" + Style.RESET_ALL)
 
     def populate_data(self, data_dict, row_list, snapshot):
         with open(r'output.csv', 'a', newline='') as f:
@@ -113,16 +118,28 @@ class main():
             for key, value in data_dict.items():
                 try:
                     response = snapshot[key]["Response"]
+                    if self.selection_iGet == "1":
+                        print(Back.GREEN + "HTTP GET response code found" + Style.RESET_ALL)
                 except Exception:
-                    response = "Response missing from DB"
+                    response = "HTTP GET response code missing from DB"
                     #time.sleep(3)
-                    response = self.get_response(key)
+                    if self.selection_iGet == "1":
+                        print(Back.BLUE + "Recording HTTP GET response code..." + Style.RESET_ALL)
+                        response = self.get_response(key)
+                    
                     #writer.writerow([key, response_2, value])
                 writer.writerow([key, response, value])
 
     def get_response(self, url):
-        response = requests.get(url, allow_redirects=False, timeout=10)
-        return response.status_code
+
+        try:
+            response = requests.get(url, allow_redirects=False, timeout=10)
+            return response.status_code
+        except (requests.exceptions.RequestException, ValueError) as e:
+            print(Back.RED + 'Error caught!\n' + Style.RESET_ALL) 
+            self.ex_cnt = self.ex_cnt + 1
+            print(f"{e}\n")
+            return e
 
     def read_data(self, rooturl):
         with open('urls_to_find.csv', 'r') as read_obj:
