@@ -14,3 +14,5 @@ data_snapshot_input.csv
 urls_to_find.csv
 Test_faster/
 JSON databases/
+split_json_to_append/Input/Bdata_snapshot_input.csv
+split_json_to_append/

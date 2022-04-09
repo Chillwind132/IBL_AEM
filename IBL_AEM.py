@@ -64,7 +64,8 @@ class main():
         elif self.selection_2 == '2':
             sys.exit()
         
-        print("Done")
+        wait = input("End")
+        
 
     def user_input(self):
         if os.path.exists("data_snapshot.json"):
@@ -73,10 +74,9 @@ class main():
             while self.selection != '1' and self.selection != '2':
                 print('Invalid input')
                 self.selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
-            self.selection_iGet = input("Would you like to record GET responses for unknown URLs? Press 1 to record; Press 2 skip\n")
-            while self.selection_iGet != '1' and self.selection_iGet != '2':
-                print('Invalid input')
+            if self.selection == '2':
                 self.selection_iGet = input("Would you like to record GET responses for unknown URLs? Press 1 to record; Press 2 skip\n")
+            
         elif os.path.exists("data_snapshot.json") == False:
             print(Back.RED + "data_snapshot.json - NOT FOUND!" + Style.RESET_ALL)
             self.selection_2 = input("Would you like to generate a new snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to Exit\n")
@@ -118,10 +118,10 @@ class main():
             for key, value in data_dict.items():
                 try:
                     response = snapshot[key]["Response"]
-                    if self.selection_iGet == "1":
-                        print(Back.GREEN + "HTTP GET response code found" + Style.RESET_ALL)
+                    #if self.selection_iGet == "1":
+                        #print(Back.GREEN + "HTTP GET response code found" + Style.RESET_ALL)
                 except Exception:
-                    response = "HTTP GET response code missing from DB"
+                    response = "not found"
                     #time.sleep(3)
                     if self.selection_iGet == "1":
                         print(Back.BLUE + "Recording HTTP GET response code..." + Style.RESET_ALL)
@@ -226,11 +226,9 @@ class main():
                 if href_link != '#':
                     full_url_list.append(href_link) ## Populate URL list for each node 
 
-            time.sleep(3)
-
             if response.status_code == 301:
                 response_ok = "301 redirect"
-                print("REDIRECT\n", url)
+                print(f"REDIRECT: {url}\n")
                 self.redirect_i = self.redirect_i + 1
             elif response.ok:
                 self.i = self.i + 1
@@ -245,8 +243,9 @@ class main():
                 print(f"INVALID: {url}\n")
                 self.broken_i = self.broken_i + 1 
                 
-            #if self.i % 10 == 0: # Update JSON every N iterations
+            #if self.i % 100 == 0: # Update JSON every N iterations
                 #self.update_json(self.snapshot)
+                #print("Snapshot saved")
 
         except (requests.exceptions.RequestException, ValueError) as e:
             print(Back.RED + 'Error caught!\n' + Style.RESET_ALL) 
@@ -259,9 +258,6 @@ class main():
 
     def update_json(self, snapshot ):
 
-        with open('data_snapshot.json') as f:
-            data = json.load(f)
-
         with open('data_snapshot.json', 'w') as f:
             json.dump(snapshot, f, indent=2)
 
@@ -273,6 +269,7 @@ class main():
 
 if __name__ == "__main__":
     main()
+    
 
     
     
