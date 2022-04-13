@@ -34,7 +34,7 @@ class main():
 
         self.main()
         
-    def main(self):
+    def main(self): 
         
         init()
         self.create_csv_header()
@@ -67,7 +67,7 @@ class main():
         wait = input("End")
         
 
-    def user_input(self):
+    def user_input(self): # User input
         if os.path.exists("data_snapshot.json"):
             print(Back.GREEN + "data_snapshot.json - FOUND!" + Style.RESET_ALL)
             self.selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
@@ -91,19 +91,15 @@ class main():
         write.writerows([refernce_header])
 
     def calculations(self, snapshot, row_list, data_dict, rooturl):
-        # We need to check if Target_url is on this page, if it is add it to the respective dict
-        #Keep snapshots of the page and then iterate through them?
+        # We need to check if target_url is on this page, if it is add it to the respective dict
+        # Keep snapshots of the pages and then iterate through them
         t0 = time.time()
         snapshot = self.load_json_snapshot(snapshot)
         self.read_data(rooturl)
         for item in row_list: 
-            #t = row_list[item]["Response"]
-            #data_dict.setdefault(item, []).append(t)
             for key in snapshot:
                 if item in snapshot[key]["List"]:
-                    data_dict.setdefault(item, []).append(key)
-                    #data_dict.setdefault(key, []).append(response)
-                    
+                    data_dict.setdefault(item, []).append(key) # Append found references to the results dict
                     print(f"FOUND - {key}")
                     self.found_cnt = self.found_cnt + 1
 
@@ -122,26 +118,24 @@ class main():
                         #print(Back.GREEN + "HTTP GET response code found" + Style.RESET_ALL)
                 except Exception:
                     response = "not found"
-                    #time.sleep(3)
                     if self.selection_iGet == "1":
                         print(Back.BLUE + "Recording HTTP GET response code..." + Style.RESET_ALL)
-                        response = self.get_response(key)
-                    
-                    #writer.writerow([key, response_2, value])
+                        response = self.get_response(key) 
                 writer.writerow([key, response, value])
 
     def get_response(self, url):
-
+        # Record HTTP response codes for references
         try:
             response = requests.get(url, allow_redirects=False, timeout=10)
             return response.status_code
-        except (requests.exceptions.RequestException, ValueError) as e:
+        except (requests.exceptions.RequestException, ValueError) as e: #Catching exceptions: Timeouts etc...
             print(Back.RED + 'Error caught!\n' + Style.RESET_ALL) 
             self.ex_cnt = self.ex_cnt + 1
             print(f"{e}\n")
-            return e
+            return e 
 
     def read_data(self, rooturl):
+        # Read input data row by row
         with open('urls_to_find.csv', 'r') as read_obj:
             exit = False
             csv_reader = reader(read_obj)
@@ -149,7 +143,7 @@ class main():
             if header != None:
                 for row in csv_reader:
 
-                    if str(row[0]) == "":
+                    if str(row[0]) == "": # Checking if the next row is empty 
                         print("EMPTRY ROW")
                         self.calculations(self.snapshot, self.row_list, self.data_dict)
                         self.populate_data(self.data_dict, self.snapshot,
@@ -177,7 +171,7 @@ class main():
             
             sys.exit()
         
-        with open('data_snapshot_input.csv', 'r') as read_obj: ### data_snapshot_input.csv 
+        with open('data_snapshot_input.csv', 'r') as read_obj: ### data_snapshot_input.csv - list of urls to be coverted into snapshots
             for row in csv.reader(read_obj):    
                 author_url_string = row[0]
                 url_1 = author_url_string.replace("/content/pwc", self.rooturl)
@@ -185,11 +179,13 @@ class main():
                     full_target_url = url_1 + ".html"
                     self.list_urls_updated.append(full_target_url)
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor: # concurrent processing
                 executor.map(self.record_response, self.list_urls_updated)  #
                 executor.shutdown(wait=True)
                     
-    def record_response(self, url):
+    def record_response(self, url): 
+        # Webscraping data - looking for <a> tags to extract the links
+
         full_url_list = []
         
         try:
@@ -198,14 +194,7 @@ class main():
             hyperlink ='a'
             for link in soup.find_all(hyperlink):
                 href_link = link.get('href')
-                ### probably not needed
-                if href_link is not None and href_link.startswith("content/pwc"):
-                    href_link_2 = href_link
-                    href_link_1 = href_link.replace("content/pwc","https://www.pwc.com")
-                    href_link =  href_link_1.replace(".html","/") + href_link_2 # checks for https://www.pwc.com/ca/en/services/tax/budgets/2021/content/pwc/ca/en/services/tax/budgets/2021.html
-                elif href_link is not None and href_link.startswith("/content/pwc"):
-                    href_link =  self.rooturl + href_link.replace("/content/pwc", "") + url
-                ###
+            
                 try:
                     if href_link[0] == "/":
                         
@@ -226,7 +215,7 @@ class main():
                 if href_link != '#':
                     full_url_list.append(href_link) ## Populate URL list for each node 
 
-            if response.status_code == 301:
+            if response.status_code == 301: # Checking the HTTP response code, 301, 404...
                 response_ok = "301 redirect"
                 print(f"REDIRECT: {url}\n")
                 self.redirect_i = self.redirect_i + 1
@@ -270,11 +259,3 @@ class main():
 if __name__ == "__main__":
     main()
     
-
-    
-    
-    
-    
-
-# https://www.pwc.com/ca/en/industries/entertainment-media/moving-into-multiple-business-models-download-form
-#/content/pwc/ca/en/industries/entertainment-media/moving-into-multiple-business-models-download-form
