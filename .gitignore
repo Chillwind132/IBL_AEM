@@ -16,3 +16,5 @@ Test_faster/
 JSON databases/
 split_json_to_append/Input/Bdata_snapshot_input.csv
 split_json_to_append/
+sso_test.py
+urls_to_find_dam.csv

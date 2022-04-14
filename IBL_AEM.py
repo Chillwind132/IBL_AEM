@@ -17,6 +17,7 @@ class main():
     def __init__(self):
         
         self.rooturl = 'https://www-pwc-com-dpe-staging.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
+        self.rooturl_env = 'dpe-stg' # dpe
 
         self.data_dict = {}
         self.snapshot = {}
@@ -30,7 +31,11 @@ class main():
         self.row = ""
         self.selection = ""
         self.selection_2 = ""
+        self.selection_references = ""
         self.selection_iGet = ""
+
+        self.url_query = []
+        self.dam_r_all_dict = {}
 
         self.main()
         
@@ -40,35 +45,72 @@ class main():
         self.create_csv_header()
         self.user_input()
 
-        if self.selection == '1':
-            t0 = time.time()
-            self.generate_snapshot_file()
-            t1 = time.time()
-            self.update_json(self.snapshot)
-            print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
-            print (Back.GREEN + f"Total nodes added to snapshot: {self.i} Total redirects: {self.redirect_i} Total broken: {self.broken_i} Total errors caught: {self.ex_cnt}" + Style.RESET_ALL)
-            
-        elif self.selection == '2':
-            
-            self.calculations(self.snapshot, self.row_list, self.data_dict, self.rooturl)
+        if self.selection_references == "1":
+            if self.selection == '1':
+                t0 = time.time()
+                self.generate_snapshot_file()
+                t1 = time.time()
+                self.update_json(self.snapshot)
+                print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
+                print (Back.GREEN + f"Total nodes added to snapshot: {self.i} Total redirects: {self.redirect_i} Total broken: {self.broken_i} Total errors caught: {self.ex_cnt}" + Style.RESET_ALL)
 
-        if self.selection_2 == '1':
-            self.create_json()
-            t0 = time.time()
-            self.generate_snapshot_file()
-            t1 = time.time()
-            self.update_json(self.snapshot)
-            print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
-            print(Back.GREEN + f"Total nodes added to snapshot: {self.i} Total redirects: {self.redirect_i} Total broken: {self.broken_i} Total errors caught: {self.ex_cnt}" + Style.RESET_)
-            
-        elif self.selection_2 == '2':
-            sys.exit()
-        
+            elif self.selection == '2':
+
+                self.calculations(self.snapshot, self.row_list, self.data_dict, self.rooturl)
+
+            if self.selection_2 == '1':
+                self.create_json()
+                t0 = time.time()
+                self.generate_snapshot_file()
+                t1 = time.time()
+                self.update_json(self.snapshot)
+                print(Back.BLUE + f"{t1-t0} seconds to record {len(self.snapshot)} URLs." + Style.RESET_ALL) 
+                print(Back.GREEN + f"Total nodes added to snapshot: {self.i} Total redirects: {self.redirect_i} Total broken: {self.broken_i} Total errors caught: {self.ex_cnt}" + Style.RESET_ALL)
+
+            elif self.selection_2 == '2':
+                sys.exit()
+        elif self.selection_references == "2":
+            self.read_data_DAM_r()
+            self.extract_r_DAM()
+            print(self.url_query)
+
         wait = input("End")
         
+    def read_data_DAM_r(self):
+        string = ".pwc.com/mnt/overlay/dam/gui/content/assets/metadataeditor.external.html?_charset_=utf-8&item="
+        with open('urls_to_find_dam.csv', 'r') as read_obj:
+            csv_reader = reader(read_obj)
+            for row in csv_reader:
+                url = "https://" + self.rooturl_env + string + row[0]
+                self.url_query.append(url)
+
+    def extract_r_DAM(self):
+
+        self.dam_r =[]
+        
+       
+       
+        for item in self.url_query:
+            response = requests.get(item, allow_redirects=False, timeout=10)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            hyperlink ='a'
+            for link in soup.find_all(hyperlink):
+                href_link = link.get('title')
+
+                if href_link.startswith("/content/pwc"):
+                    self.dam_r.append(href_link)
+
+        self.dam_r_all_dict[href_link]["List"] = self.dam_r
+
 
     def user_input(self): # User input
-        if os.path.exists("data_snapshot.json"):
+
+        self.selection_references = input("Press 1 for page references; Press 2 for asset references\n")
+        while self.selection_references != '1' and self.selection_references != '2':
+            print('Invalid input')
+            self.selection_references = input("Press 1 for page references; Press 2 for asset references\n")
+
+        if os.path.exists("data_snapshot.json") and self.selection_references == "1":
             print(Back.GREEN + "data_snapshot.json - FOUND!" + Style.RESET_ALL)
             self.selection = input("Would you like to re-generate snapshot file? Press 1 to regenerate; Press 2 to use current file\n")
             while self.selection != '1' and self.selection != '2':
@@ -83,6 +125,7 @@ class main():
             while self.selection_2 != '1' and self.selection_2 != '2':
                 print('Invalid input')
                 self.selection_2 = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to continue\n")
+        
             
     def create_csv_header(self):
         refernce_header = ['Outbound reference', 'Status', 'Source URLs']
@@ -137,7 +180,6 @@ class main():
     def read_data(self, rooturl):
         # Read input data row by row
         with open('urls_to_find.csv', 'r') as read_obj:
-            exit = False
             csv_reader = reader(read_obj)
             header = next(csv_reader)
             if header != None:
