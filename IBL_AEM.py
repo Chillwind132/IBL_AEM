@@ -12,6 +12,8 @@ import sys
 from colorama import Fore, Back, Style
 from colorama import init
 import concurrent.futures
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 
 class main():
     def __init__(self):
@@ -36,6 +38,7 @@ class main():
 
         self.url_query = []
         self.dam_r_all_dict = {}
+        self.url = ""
 
         self.main()
         
@@ -81,27 +84,40 @@ class main():
         with open('urls_to_find_dam.csv', 'r') as read_obj:
             csv_reader = reader(read_obj)
             for row in csv_reader:
-                url = "https://" + self.rooturl_env + string + row[0]
-                self.url_query.append(url)
+                self.url = "https://" + self.rooturl_env + string + row[0]
+                self.url_query.append(self.url)
 
     def extract_r_DAM(self):
 
-        self.dam_r =[]
-        
-       
-       
-        for item in self.url_query:
-            response = requests.get(item, allow_redirects=False, timeout=10)
-            soup = BeautifulSoup(response.text, 'html.parser')
+        with webdriver.Chrome() as driver:
+
+            self.dam_r =[]
+
+            driver.get(self.url)
+
+            time.sleep(2)
+
+            email = driver.find_element_by_id("initEmail").send_keys("mikhail.sidorenko@pwc.com")
+            button = driver.find_element_by_class_name("a-btn.a-btn-primary.a-btn-xl").click()
+
+
+            time.sleep(5) #This is the fix
+
+            driver_cookies = driver.get_cookies()
+            c = {c['name']:c['value'] for c in driver_cookies}
+            res = requests.get(self.url,cookies=c)
+            soup = BeautifulSoup(res.text,"lxml")
             hyperlink ='a'
+
             for link in soup.find_all(hyperlink):
                 href_link = link.get('title')
 
-                if href_link.startswith("/content/pwc"):
-                    self.dam_r.append(href_link)
-
-        self.dam_r_all_dict[href_link]["List"] = self.dam_r
-
+                if href_link is not None:
+                    if href_link.startswith("/content/pwc"):
+                        self.dam_r.append(href_link)
+            self.dam_r_all_dict[self.url] = {}
+            self.dam_r_all_dict[self.url]["List"] = self.dam_r
+            print("test")
 
     def user_input(self): # User input
 
