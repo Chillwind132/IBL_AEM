@@ -45,8 +45,8 @@ class main():
     def main(self): 
         
         init()
-        self.create_csv_header()
         self.user_input()
+        self.create_csv_header()
 
         if self.selection_references == "1":
             if self.selection == '1':
@@ -73,12 +73,21 @@ class main():
             elif self.selection_2 == '2':
                 sys.exit()
         elif self.selection_references == "2":
+
+            self.create_csv_header()
             self.read_data_DAM_r()
-            self.extract_r_DAM()
+            
             print(self.url_query)
 
         wait = input("End")
-        
+
+    def output_dam(self): ##########
+        with open(r'output.csv', 'a', newline='') as f:
+            writer = csv.writer(f)
+            
+            for key, value in self.dam_r_all_dict.items():
+                writer.writerow([key, value['List']])
+
     def read_data_DAM_r(self):
         string = ".pwc.com/mnt/overlay/dam/gui/content/assets/metadataeditor.external.html?_charset_=utf-8&item="
         with open('urls_to_find_dam.csv', 'r') as read_obj:
@@ -86,6 +95,8 @@ class main():
             for row in csv_reader:
                 self.url = "https://" + self.rooturl_env + string + row[0]
                 self.url_query.append(self.url)
+                self.extract_r_DAM()
+        self.output_dam()
 
     def extract_r_DAM(self):
 
@@ -106,17 +117,19 @@ class main():
             driver_cookies = driver.get_cookies()
             c = {c['name']:c['value'] for c in driver_cookies}
             res = requests.get(self.url,cookies=c)
-            soup = BeautifulSoup(res.text,"lxml")
+            soup = BeautifulSoup(res.text,'html.parser')
             hyperlink ='a'
 
             for link in soup.find_all(hyperlink):
                 href_link = link.get('title')
 
                 if href_link is not None:
-                    if href_link.startswith("/content/pwc"):
+                    if href_link.startswith("/content/pwc") or href_link.startswith("/content/dam"):
                         self.dam_r.append(href_link)
+
             self.dam_r_all_dict[self.url] = {}
             self.dam_r_all_dict[self.url]["List"] = self.dam_r
+            
             print("test")
 
     def user_input(self): # User input
@@ -144,7 +157,11 @@ class main():
         
             
     def create_csv_header(self):
-        refernce_header = ['Outbound reference', 'Status', 'Source URLs']
+        refernce_header = ""
+        if self.selection_references == "1":
+            refernce_header = ['Outbound reference', 'Status', 'Source URLs']
+        elif self.selection_references == "2":
+            refernce_header = ['Asset', 'References']
         file = open('output.csv', 'w', newline='')
         write = csv.writer(file)
         write.writerows([refernce_header])
