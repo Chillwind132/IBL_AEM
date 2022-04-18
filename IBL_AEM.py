@@ -14,6 +14,7 @@ from colorama import init
 import concurrent.futures
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 
 class main():
     def __init__(self):
@@ -81,11 +82,16 @@ class main():
 
         wait = input("End")
 
-    def output_dam(self): ##########
+    def output_dam(self): # write ouput data to 'output.csv'
         with open(r'output.csv', 'a', newline='') as f:
             writer = csv.writer(f)
             
             for key, value in self.dam_r_all_dict.items():
+                index = key.find('/content/dam')
+                if index !=-1 :
+                    key = key[key.find('/content/dam'):]
+                else:
+                    key = "error"
                 writer.writerow([key, value['List']])
 
     def read_data_DAM_r(self):
@@ -100,37 +106,41 @@ class main():
 
     def extract_r_DAM(self):
 
-        with webdriver.Chrome() as driver:
+        self.dam_r =[]
 
-            self.dam_r =[]
+        chrome_options = Options()
+        
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get(self.url)
 
-            driver.get(self.url)
+        time.sleep(2)
 
-            time.sleep(2)
+        email = driver.find_element_by_id("initEmail").send_keys("mikhail.sidorenko@pwc.com")
+        button = driver.find_element_by_class_name("a-btn.a-btn-primary.a-btn-xl").click()
 
-            email = driver.find_element_by_id("initEmail").send_keys("mikhail.sidorenko@pwc.com")
-            button = driver.find_element_by_class_name("a-btn.a-btn-primary.a-btn-xl").click()
+        time.sleep(5)
 
+        driver_cookies = driver.get_cookies()
+        c = {c['name']:c['value'] for c in driver_cookies}
+        res = requests.get(self.url,cookies=c)
+        soup = BeautifulSoup(res.text,'html.parser')
+        hyperlink ='a'
+        
+        for link in soup.find_all(hyperlink):
+            href_link = link.get('title')
 
-            time.sleep(5) #This is the fix
+            if href_link is not None:
+                if href_link.startswith("/content/pwc") or href_link.startswith("/content/dam"):
+                    self.dam_r.append(href_link)
 
-            driver_cookies = driver.get_cookies()
-            c = {c['name']:c['value'] for c in driver_cookies}
-            res = requests.get(self.url,cookies=c)
-            soup = BeautifulSoup(res.text,'html.parser')
-            hyperlink ='a'
+        self.dam_r_all_dict[self.url] = {}
+        self.dam_r_all_dict[self.url]["List"] = self.dam_r
 
-            for link in soup.find_all(hyperlink):
-                href_link = link.get('title')
+        print(Back.BLUE + f"\nURL: {self.url}\n References: {len(self.dam_r)}" + Style.RESET_ALL)
+        
+        
 
-                if href_link is not None:
-                    if href_link.startswith("/content/pwc") or href_link.startswith("/content/dam"):
-                        self.dam_r.append(href_link)
-
-            self.dam_r_all_dict[self.url] = {}
-            self.dam_r_all_dict[self.url]["List"] = self.dam_r
             
-            print("test")
 
     def user_input(self): # User input
 
