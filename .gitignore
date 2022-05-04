@@ -16,3 +16,6 @@ split_json_to_append/Input/Bdata_snapshot_input.csv
 split_json_to_append/
 sso_test.py
 chromedriver_win32.zip
+urls_to_find.csv
+urls_to_find_dam.csv
+data_snapshot_input.csv
