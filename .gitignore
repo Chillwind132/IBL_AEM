@@ -6,16 +6,13 @@ data_backup/
 Time.txt.bak
 Time.txt
 backup/
-data_snapshot.csv
 data_snapshot.json
 timer.txt
 backup/~$canadian_pages_stage_publishedOnly.xlsx
-data_snapshot_input.csv
-urls_to_find.csv
+data_snapshot.csv
 Test_faster/
 JSON databases/
 split_json_to_append/Input/Bdata_snapshot_input.csv
 split_json_to_append/
 sso_test.py
-urls_to_find_dam.csv
 chromedriver_win32.zip
