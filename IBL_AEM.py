@@ -1,26 +1,26 @@
+from colorama import Fore, Back, Style
+from colorama import init
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from bs4 import BeautifulSoup
 from csv import reader
 from logging import exception
 from os import read
 import time
 import requests
-from bs4 import BeautifulSoup
 import csv  
 import time
 import os.path
 import json
 import sys
-from colorama import Fore, Back, Style
-from colorama import init
 import concurrent.futures
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
 
 class main():
     def __init__(self):
         
         self.rooturl = 'https://www-pwc-com-dpe-staging.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
-        self.rooturl_env = 'dpe-stg' # dpe
+        self.rooturl_env = 'dpe' # dpe dpe-stg
 
         self.data_dict = {}
         self.snapshot = {}
@@ -138,10 +138,6 @@ class main():
 
         print(Back.BLUE + f"\nURL: {self.url}\n References: {len(self.dam_r)}" + Style.RESET_ALL)
         
-        
-
-            
-
     def user_input(self): # User input
 
         self.selection_references = input("Press 1 for page references; Press 2 for asset references\n")
@@ -165,7 +161,6 @@ class main():
                 print('Invalid input')
                 self.selection_2 = input("Would you like to generate a snapshot file from data_snapshot_input.csv? Press 1 to generate; Press 2 to continue\n")
         
-            
     def create_csv_header(self):
         refernce_header = ""
         if self.selection_references == "1":
