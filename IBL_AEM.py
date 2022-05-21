@@ -82,7 +82,7 @@ class main():
 
         wait = input("End")
 
-    def output_dam(self): # write ouput data to 'output.csv'
+    def output_dam(self): # write output data to 'output.csv'
         with open(r'output.csv', 'a', newline='') as f:
             writer = csv.writer(f)
             
@@ -224,7 +224,6 @@ class main():
                 for row in csv_reader:
 
                     if str(row[0]) == "": # Checking if the next row is empty 
-                        print("EMPTRY ROW")
                         self.calculations(self.snapshot, self.row_list, self.data_dict)
                         self.populate_data(self.data_dict, self.snapshot,
                                       full_target_url, self.row_list)
@@ -251,7 +250,7 @@ class main():
             
             sys.exit()
         
-        with open('data_snapshot_input.csv', 'r') as read_obj: ### data_snapshot_input.csv - list of urls to be coverted into snapshots
+        with open('data_snapshot_input.csv', 'r') as read_obj: ### data_snapshot_input.csv - list of urls to be converted into snapshots
             for row in csv.reader(read_obj):    
                 author_url_string = row[0]
                 url_1 = author_url_string.replace("/content/pwc", self.rooturl)
