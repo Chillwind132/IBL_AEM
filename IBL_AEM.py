@@ -19,7 +19,7 @@ import concurrent.futures
 class main():
     def __init__(self):
         
-        self.rooturl = 'https://www-pwc-com-dpe-staging.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
+        self.rooturl = 'https://www.pwc.com'  # https://www.pwc.com https://www-pwc-com-dpe-staging.pwc.com
         self.rooturl_env = 'dpe' # dpe dpe-stg
 
         self.data_dict = {}
@@ -241,7 +241,7 @@ class main():
 
     def generate_snapshot_file(self):
 
-        MAX_THREADS = 5 # Number of parallel threads
+        MAX_THREADS = 3 # Number of parallel threads
 
         if os.path.exists("data_snapshot_input.csv"):
             print(Back.GREEN + "data_snapshot_input.csv File Found - Generating a snapshot..." + Style.RESET_ALL)
